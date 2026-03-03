@@ -1,0 +1,94 @@
+project: etcd-tests
+
+path: /root/etcd-tests
+
+include:
+  - etcd/
+
+exclude:
+  - etcd/bin/
+  - etcd/covdir/
+  - etcd/coverage/
+
+backends:
+  qemu:
+    systems:
+      - ubuntu-22.04
+      - ubuntu-24.04
+
+  # Switch back to lxd when running on Ubuntu (no AppArmor/snap issues there)
+  # lxd:
+  #   systems:
+  #     - ubuntu-22.04
+  #     - ubuntu-24.04
+
+systems:
+  ubuntu-22.04:
+    username: root
+  ubuntu-24.04:
+    username: root
+
+environment:
+  GO_VERSION: "1.26.0"
+  GOPATH: /root/go
+  PATH: /usr/local/go/bin:/root/go/bin:$PATH
+  ETCD_DIR: /root/etcd-tests/etcd
+
+prepare: |
+  # System dependencies
+  apt-get update -qq
+  apt-get install -yq make gcc git curl wget tar xz-utils jq ca-certificates
+
+  # Install Go 1.26
+  if ! /usr/local/go/bin/go version 2>/dev/null | grep -q "go${GO_VERSION}"; then
+    echo "Installing Go ${GO_VERSION}..."
+    curl -sSL "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" -o /tmp/go.tar.gz
+    rm -rf /usr/local/go
+    tar -C /usr/local -xzf /tmp/go.tar.gz
+    rm /tmp/go.tar.gz
+  fi
+  go version
+
+  # Pre-download all module dependencies (test.sh sets GOFLAGS=-mod=readonly)
+  cd "$ETCD_DIR"
+  go work sync
+  go mod download
+
+restore: |
+  cd "$ETCD_DIR" && make clean || true
+
+kill-timeout: 30m
+warn-timeout: 20m
+
+suites:
+  tests/spread/unit/:
+    summary: etcd unit tests
+    kill-timeout: 15m
+    warn-timeout: 10m
+
+  # Phase 2 — Integration tests
+  # tests/spread/integration/:
+  #   summary: etcd integration tests (PASSES=integration)
+  #   kill-timeout: 30m
+  #   prepare: |
+  #     cd "$ETCD_DIR" && go build ./...
+
+  # Phase 3 — E2E tests
+  # tests/spread/e2e/:
+  #   summary: etcd end-to-end tests (PASSES=e2e)
+  #   kill-timeout: 45m
+  #   prepare: |
+  #     cd "$ETCD_DIR"
+  #     GO_BUILD_FLAGS="-v -mod=readonly" ./scripts/build.sh
+
+  # Phase 4 — Robustness tests
+  # tests/spread/robustness/:
+  #   summary: etcd robustness tests (PASSES=robustness)
+  #   kill-timeout: 60m
+  #   prepare: |
+  #     cd "$ETCD_DIR"
+  #     make gofail-enable
+  #     make build
+  #     make install-lazyfs
+  #   restore: |
+  #     cd "$ETCD_DIR" && make gofail-disable || true

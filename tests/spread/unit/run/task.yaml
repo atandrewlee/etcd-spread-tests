@@ -1,0 +1,5 @@
+summary: Run etcd unit tests
+
+execute: |
+  cd "$ETCD_DIR"
+  PASSES=unit ./scripts/test.sh
