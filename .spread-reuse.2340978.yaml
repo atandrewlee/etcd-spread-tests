@@ -1,8 +1,0 @@
-backends:
-  qemu:
-    systems:
-    - ubuntu-24.04:
-        password: 6d50f7ae4ae25013
-        address: localhost:59384
-        data:
-          pid: 2341035
