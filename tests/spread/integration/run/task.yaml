@@ -1,0 +1,10 @@
+summary: Run etcd integration tests
+
+execute: |
+  cd "$ETCD_DIR"
+  set -o pipefail
+  PASSES=integration ./scripts/test.sh -v 2>&1 | tee /tmp/integration-tests.log || {
+    echo "=== FAILURES ==="
+    grep -B2 -A15 '--- FAIL\|^panic\|DATA RACE' /tmp/integration-tests.log | tail -120
+    exit 1
+  }

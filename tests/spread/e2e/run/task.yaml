@@ -1,0 +1,10 @@
+summary: Run etcd e2e tests
+
+execute: |
+  cd "$ETCD_DIR"
+  set -o pipefail
+  PASSES=e2e ./scripts/test.sh -v 2>&1 | tee /tmp/e2e-tests.log || {
+    echo "=== FAILURES ==="
+    grep -B2 -A15 '--- FAIL\|^panic\|DATA RACE' /tmp/e2e-tests.log | tail -120
+    exit 1
+  }

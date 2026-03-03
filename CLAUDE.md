@@ -13,14 +13,14 @@ tasks across a matrix of backends × systems.
 
 ```
 etcd-tests/
-├── spread.yaml                  # Spread configuration (backends, systems, suites)
-├── CLAUDE.md                    # This file
+├── spread.yaml                        # Spread configuration (backends, systems, suites)
+├── CLAUDE.md                          # This file
 └── tests/
     └── spread/
-        └── unit/run/task.yaml   # Phase 1: unit tests
-        # integration/           # Phase 2 (not yet implemented)
-        # e2e/                   # Phase 3 (not yet implemented)
-        # robustness/            # Phase 4 (not yet implemented)
+        ├── unit/run/task.yaml         # Phase 1: unit tests
+        ├── integration/run/task.yaml  # Phase 2: integration tests
+        ├── e2e/run/task.yaml          # Phase 3: e2e tests
+        └── robustness/run/task.yaml   # Phase 4: robustness tests
 ```
 
 ---
@@ -95,6 +95,21 @@ spread -debug qemu:ubuntu-24.04:tests/spread/unit/
 spread -reuse qemu:ubuntu-24.04:tests/spread/unit/
 ```
 
+### Monitoring task output in real time
+
+Spread does not stream task stdout to the terminal — it captures output and only
+shows it on failure. There is no spread.yaml option to change this.
+
+To watch a running task live, tail the log file inside the container from a
+second terminal. The container name is printed in the spread output
+(e.g. `spread-9-ubuntu-24-04`):
+
+```bash
+lxc exec spread-9-ubuntu-24-04 -- tail -f /tmp/integration-tests.log
+# or for unit tests:
+lxc exec spread-9-ubuntu-24-04 -- tail -f /tmp/unit-tests.log
+```
+
 ### Backends
 
 **Current default: QEMU** — used on Arch Linux where snap LXD has AppArmor issues.
@@ -148,6 +163,6 @@ Long-term fix: use native LXD from AUR (`yay -S lxd`) or run on Ubuntu.
 | Phase | Test type    | Status         | Notes                                              |
 |-------|--------------|----------------|----------------------------------------------------|
 | 1     | Unit         | Done           | `tests/spread/unit/run/task.yaml`                  |
-| 2     | Integration  | Not started    | Uncomment suite in `spread.yaml`, add task file    |
-| 3     | E2E          | Not started    | Requires build step in suite `prepare`             |
-| 4     | Robustness   | Not started    | Requires gofail + lazyfs, most complex setup       |
+| 2     | Integration  | Done           | `tests/spread/integration/run/task.yaml`           |
+| 3     | E2E          | Done           | `tests/spread/e2e/run/task.yaml`                   |
+| 4     | Robustness   | Done           | `tests/spread/robustness/run/task.yaml`            |

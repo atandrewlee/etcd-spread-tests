@@ -62,28 +62,47 @@ suites:
     warn-timeout: 10m
 
   # Phase 2 — Integration tests
-  # tests/spread/integration/:
-  #   summary: etcd integration tests (PASSES=integration)
-  #   kill-timeout: 30m
-  #   prepare: |
-  #     cd "$ETCD_DIR" && go build ./...
+  tests/spread/integration/:
+    summary: etcd integration tests
+    kill-timeout: 45m
+    warn-timeout: 40m
 
   # Phase 3 — E2E tests
-  # tests/spread/e2e/:
-  #   summary: etcd end-to-end tests (PASSES=e2e)
-  #   kill-timeout: 45m
-  #   prepare: |
-  #     cd "$ETCD_DIR"
-  #     GO_BUILD_FLAGS="-v -mod=readonly" ./scripts/build.sh
+  tests/spread/e2e/:
+    summary: etcd e2e tests
+    kill-timeout: 75m
+    warn-timeout: 65m
+    prepare: |
+      cd "$ETCD_DIR"
+      GO_BUILD_FLAGS="-v -mod=readonly" ./scripts/build.sh
 
   # Phase 4 — Robustness tests
-  # tests/spread/robustness/:
-  #   summary: etcd robustness tests (PASSES=robustness)
-  #   kill-timeout: 60m
-  #   prepare: |
-  #     cd "$ETCD_DIR"
-  #     make gofail-enable
-  #     make build
-  #     make install-lazyfs
-  #   restore: |
-  #     cd "$ETCD_DIR" && make gofail-disable || true
+  tests/spread/robustness/:
+    summary: etcd robustness tests
+    kill-timeout: 90m
+    warn-timeout: 80m
+    prepare: |
+      cd "$ETCD_DIR"
+      GOFAIL_VERSION=$(cd tools/mod && go list -m -f '{{.Version}}' go.etcd.io/gofail)
+      go install "go.etcd.io/gofail@${GOFAIL_VERSION}"
+      gofail enable \
+        server/etcdserver/ server/lease server/lease/leasehttp \
+        server/storage/backend/ server/storage/mvcc/ server/storage/wal/ \
+        server/etcdserver/api/v3rpc/ server/etcdserver/api/membership/ \
+        server/etcdserver/api/rafthttp/
+      for mod in server etcdutl etcdctl tests; do
+        (cd "$mod" && go get "go.etcd.io/gofail@${GOFAIL_VERSION}")
+      done
+      go work sync
+      GO_BUILD_FLAGS="-v -mod=readonly" ./scripts/build.sh
+    restore: |
+      cd "$ETCD_DIR"
+      gofail disable \
+        server/etcdserver/ server/lease server/lease/leasehttp \
+        server/storage/backend/ server/storage/mvcc/ server/storage/wal/ \
+        server/etcdserver/api/v3rpc/ server/etcdserver/api/membership/ \
+        server/etcdserver/api/rafthttp/ || true
+      for mod in server etcdutl etcdctl tests; do
+        (cd "$mod" && go mod tidy) || true
+      done
+      go work sync || true
