@@ -2,4 +2,9 @@ summary: Run etcd unit tests
 
 execute: |
   cd "$ETCD_DIR"
-  PASSES=unit ./scripts/test.sh
+  set -o pipefail
+  PASSES=unit ./scripts/test.sh -p=1 -v 2>&1 | tee /tmp/unit-tests.log || {
+    echo "=== FAILURES ==="
+    grep -B2 -A15 '--- FAIL\|^panic\|DATA RACE' /tmp/unit-tests.log | tail -120
+    exit 1
+  }

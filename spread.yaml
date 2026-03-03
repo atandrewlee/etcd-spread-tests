@@ -4,6 +4,7 @@ path: /root/etcd-tests
 
 include:
   - etcd/
+  - tests/
 
 exclude:
   - etcd/bin/
@@ -11,16 +12,10 @@ exclude:
   - etcd/coverage/
 
 backends:
-  qemu:
-    systems:
-      - ubuntu-22.04
-      - ubuntu-24.04
-
-  # Switch back to lxd when running on Ubuntu (no AppArmor/snap issues there)
-  # lxd:
-  #   systems:
-  #     - ubuntu-22.04
-  #     - ubuntu-24.04
+   lxd:
+     systems:
+       - ubuntu-22.04
+       - ubuntu-24.04
 
 systems:
   ubuntu-22.04:
